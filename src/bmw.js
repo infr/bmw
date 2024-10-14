@@ -142,7 +142,7 @@ class BMWClient {
 
         for (const vehicle of electriVehicles) {
             const state = await this.bmwClientAPI.vehicleState(vehicle.vin);
-            if (state?.electricChargingState?.isChargerConnected) {
+            if (state?.state?.electricChargingState?.isChargerConnected) {
                 vehicle.event = await this.bmwClientAPI.startCharging(vehicle.vin);
                 console.log(`${vehicle.attributes?.model} (${vehicle.vin}): Starting Charge...`)
             }
@@ -161,10 +161,10 @@ class BMWClient {
 
         for (const vehicle of electriVehicles) {
             const state = await this.bmwClientAPI.vehicleState(vehicle.vin);
-            if (state?.electricChargingState?.isChargerConnected) {
+            if (state?.state?.electricChargingState?.isChargerConnected) {
                 const chargeState = await this.bmwClientAPI.vehicleChargeState(vehicle.vin);
                 if (chargeState?.status !== 'STOPPED') {
-                    vehicle.event = await this.bmwClientAPI.startCharging(vehicle.vin);
+                    vehicle.event = await this.bmwClientAPI.stopCharging(vehicle.vin);
                     console.log(`${vehicle.attributes?.model} (${vehicle.vin}): Stopping Charge...`)
                 }
                 else {
