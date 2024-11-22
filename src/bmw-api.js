@@ -60,6 +60,7 @@ class BMWClientAPI {
             password: password || process.env.BMW_PASSWORD || ini.password,
             geo: geo || process.env.BMW_GEO || ini.geo || Regions.NORTH_AMERICA,
             session: process.env.BMW_SESSION || ini.session || DEFAULT_SESSION_ID,
+            hcaptchatoken: process.env.HCAPTCHA_TOKEN || ini.hcaptcha_token,
         }, auth);
     }
 
@@ -290,7 +291,12 @@ class BMWClientAPI {
 
         // Call authenticate endpoint first time (with user/pw) and get authentication
         const authUrl = oauthConfig.tokenEndpoint?.replace("/token", "/authenticate");
-        const authResponse = await this.post(authUrl, authData, {}, false, httpErrorAsError)
+        const authResponse = await this.post(authUrl,
+            authData,
+            this.auth.hcaptchatoken ? { hcaptchatoken: this.auth.hcaptchatoken } : {},
+            false,
+            httpErrorAsError
+        )
 
         authData.set("authorization", authResponse?.redirect_to?.split("authorization=")[1]?.split("&")[0]);
         authData.delete("grant_type");
@@ -300,6 +306,9 @@ class BMWClientAPI {
         const headers = {
             Cookie: `GCDMSSO=${authData.get('authorization')}`,
         }
+
+        // Token is needed only for the first call
+        this.auth.hcaptchatoken = null;
 
         // With authorization, call authenticate endpoint second time to get code
         const authComplete = await this.post(authUrl, authData, headers, false, httpErrorAsError)
