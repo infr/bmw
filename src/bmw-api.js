@@ -50,6 +50,20 @@ const UA = {
 
 const log = console;
 
+class Unauthorized extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'Unauthorized';
+    }
+}
+
+class BadRequest extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'BadRequest';
+    }
+}
+
 class BMWClientAPI {
     constructor(username, password, geo, auth = {path: '~/.bmw', section: 'default'}) {
         const ini = IniFile.read(
@@ -201,7 +215,7 @@ class BMWClientAPI {
             log.error(`${method} ${targetPath} (${res.headers.get('status') || res.status + ' ' + res.statusText})`);
             log.error(res?._body ?? Object.fromEntries(res.headers));
             if (httpErrorAsError) {
-                throw new Error(res.headers.get('status'));
+                throw new Unauthorized(res.headers.get('status'));
             }
         }
         else if (res.status >= 500) {
@@ -229,9 +243,11 @@ class BMWClientAPI {
         else if (res.status >= 400) {
             const status = res.headers.get('status') || res.status + ' ' + res.statusText;
             log.error(`${method} ${targetPath} (${status})`);
-            log.error(Buffer.from(res?._body).toString() ?? Object.fromEntries(res.headers));
+            try {
+                log.error(Buffer.from(res?._body).toString() ?? Object.fromEntries(res.headers));
+            } catch (_) {}
             if (httpErrorAsError) {
-                throw new Error(`${method} ${targetPath} (${status})`);
+                throw new BadRequest(`${method} ${targetPath} (${status})`);
             }
         }
         // TODO: what about other 3xx?
@@ -351,10 +367,15 @@ class BMWClientAPI {
 
         try {
             this.token = await this.post(oauthConfig.tokenEndpoint, data, headers, false);
-        }
-        catch {
+        } catch (error) {
+            if (error instanceof BadRequest || error instanceof Unauthorized) {
+                log.info(`Caught ${error.name}: ${error.message}`);
+                CACHE.delete('refreshToken');
+            }
             this.token = null;
         }
+
+        log.info(`Refreshed token ${JSON.stringify(this.token)}`);
     }
 
     async vehicles() {
