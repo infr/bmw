@@ -85,12 +85,16 @@ class BMWClientAPI {
     set token(val) {
         if (val) {
             val.expires = Date.now() + ((val.expires_in || 0) * 1000);
+            CACHE.set('refreshToken', val.refresh_token, null);
+            delete val.refresh_token;
+
             CACHE.set('token', val, val.expires);
         }
         else {
             CACHE.delete('token');
         }
     }
+    get refreshToken() { return CACHE.get('refreshToken'); }
 
     get session() { return this.auth?.session; }
     set session(val) { if (val) this.auth.session = val; }
@@ -265,7 +269,9 @@ class BMWClientAPI {
         return await this.get('/eadrax-ucs/v1/presentation/oauth/config', configHeaders, 60*60, false);
     }
     async login(force = false, httpErrorAsError = true) {
-        await this.refresh(force);
+        if (!this.token) {
+            await this.refresh();
+        }
 
         if (!force && this.token) return;
         if (!this.auth?.email || !this.auth?.password) throw new Error('Email or Password is blank');
@@ -327,9 +333,8 @@ class BMWClientAPI {
         this.token = await this.post(oauthConfig.tokenEndpoint, grantData, headers, false, httpErrorAsError);
     }
 
-    async refresh(force = false) {
-        if (!this.token?.refresh_token) return;
-        if (!force) return;
+    async refresh() {
+        if (!this.refreshToken) return;
 
         const oauthConfig = await this.oauthConfig();
 
@@ -337,7 +342,7 @@ class BMWClientAPI {
             "redirect_uri": oauthConfig.returnUrl,
             "scope": (oauthConfig.scopes ?? []).join(" "),
             "grant_type": "refresh_token",
-            "refresh_token": this.token.refresh_token
+            "refresh_token": this.refreshToken
         }));
 
         const headers = {
