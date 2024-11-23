@@ -46,6 +46,7 @@ class SimpleCache {
 
     delete(key) {
         delete this.cache[key];
+        require('fs').writeFileSync(this.cacheFile, JSON.stringify(this.cache));
     }
 }
 
