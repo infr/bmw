@@ -21,6 +21,7 @@ program
     .option('--email <username>', 'MyBMW login email. For stronger security set the BMW_EMAIL environment variable or edit the ~/.bmw config.')
     .option('--password <password>', 'MyBMW password. For stronger security set the BMW_PASSWORD environment variable or edit the ~/.bmw config.')
     .option('--geo <geo>', 'The GEO your MyBMW account is associated (na, cn, or row). Also can be set with BMW_GEO env. variable or in ~/.bmw config')
+    .option('--hcaptcha_token <hcaptcha_token>', 'hCaptcha token used in the first login. Also can be set with BMW_HCAPTCHA_TOKEN env. variable or in ~/.bmw config')
     .hook('preAction', (thisCommand, actionCommand) => {
         if (thisCommand.opts().debug) {
             //nothing

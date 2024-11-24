@@ -74,7 +74,7 @@ class BMWClientAPI {
             password: password || process.env.BMW_PASSWORD || ini.password,
             geo: geo || process.env.BMW_GEO || ini.geo || Regions.NORTH_AMERICA,
             session: process.env.BMW_SESSION || ini.session || DEFAULT_SESSION_ID,
-            hcaptchatoken: hcaptchatoken || process.env.HCAPTCHA_TOKEN || ini.hcaptcha_token,
+            hcaptchatoken: hcaptchatoken || process.env.BMW_HCAPTCHA_TOKEN || ini.hcaptcha_token,
         }, auth);
     }
 

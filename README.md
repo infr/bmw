@@ -12,7 +12,7 @@ BMW vehicles offer limited control and telemetry through the MyBMW app. This lib
 
 Authentication uses the MyBMW account credentials. It can be passed through to the library using one of three ways:
 
-* environment variables `BMW_EMAIL`, `BMW_PASSWORD` and `BMW_GEO`
+* environment variables `BMW_EMAIL`, `BMW_PASSWORD`, `BMW_GEO` and `BMW_HCAPTCHA_TOKEN`
 * config file located `~/.bmw` in the form of:
 
     ``` ini
@@ -20,13 +20,16 @@ Authentication uses the MyBMW account credentials. It can be passed through to t
     email=user@example.com
     password=p@$$w0rd
     geo=na
+    hcaptcha_token=<hCaptcha token>
     ```
 
-* pass the values directly into the constructor `new BMWClientAPI(username, password, geo)`
+* pass the values directly into the constructor `new BMWClientAPI(username, password, geo, hcaptchatoken)`
 
 > The valid `geo` values are: `na` (North America), `cn` (China) and `row` (Rest of World).
 
 > NB: `na` and `row` has been tested so far
+
+> NB: `hcaptcha_token` is needed for the initial login. After that, the access token is stored and refreshed automatically.
 
 ## Command Line Interface
 
