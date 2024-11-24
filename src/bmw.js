@@ -2,8 +2,8 @@ const BMWClientAPI = require('./bmw-api');
 const { sleep, sum, parseRelativeDate} = require('./utils');
 
 class BMWClient {
-    constructor(username, password, region) {
-        this.bmwClientAPI = new BMWClientAPI(username, password, region);
+    constructor(username, password, region, hcaptchatoken) {
+        this.bmwClientAPI = new BMWClientAPI(username, password, region, hcaptchatoken);
     }
 
     async login(forceRefresh = false) {

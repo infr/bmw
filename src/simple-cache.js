@@ -48,6 +48,11 @@ class SimpleCache {
         delete this.cache[key];
         require('fs').writeFileSync(this.cacheFile, JSON.stringify(this.cache));
     }
+
+    reset() {
+        this.cache = {};
+        require('fs').writeFileSync(this.cacheFile, JSON.stringify(this.cache));
+    }
 }
 
 module.exports = {SimpleCache};

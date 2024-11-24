@@ -65,7 +65,7 @@ class BadRequest extends Error {
 }
 
 class BMWClientAPI {
-    constructor(username, password, geo, auth = {path: '~/.bmw', section: 'default'}) {
+    constructor(username, password, geo, hcaptchatoken, auth = {path: '~/.bmw', section: 'default'}) {
         const ini = IniFile.read(
             process.env.BMW_PATH || auth.path,
             process.env.BMW_SECTION || auth.section);
@@ -74,7 +74,7 @@ class BMWClientAPI {
             password: password || process.env.BMW_PASSWORD || ini.password,
             geo: geo || process.env.BMW_GEO || ini.geo || Regions.NORTH_AMERICA,
             session: process.env.BMW_SESSION || ini.session || DEFAULT_SESSION_ID,
-            hcaptchatoken: process.env.HCAPTCHA_TOKEN || ini.hcaptcha_token,
+            hcaptchatoken: hcaptchatoken || process.env.HCAPTCHA_TOKEN || ini.hcaptcha_token,
         }, auth);
     }
 
@@ -82,6 +82,10 @@ class BMWClientAPI {
     get region() {return this.auth?.geo};
     get host() {  return UA[this.auth.geo]?.host; }
     get version() { return UA[this.auth.geo]?.version; }
+
+    resetCache() {
+        CACHE.reset();
+    }
 
     get ocpApimSubscriptionKey() {
         try {
@@ -328,9 +332,6 @@ class BMWClientAPI {
         const headers = {
             Cookie: `GCDMSSO=${authData.get('authorization')}`,
         }
-
-        // Token is needed only for the first call
-        this.auth.hcaptchatoken = null;
 
         // With authorization, call authenticate endpoint second time to get code
         const authComplete = await this.post(authUrl, authData, headers, false, httpErrorAsError)
