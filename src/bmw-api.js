@@ -295,6 +295,7 @@ class BMWClientAPI {
 
         if (!force && this.token) return;
         if (!this.auth?.email || !this.auth?.password) throw new Error('Email or Password is blank');
+        if (!this.auth?.hcaptchatoken) throw new Error('hCaptcha token is blank');
 
         const oauthConfig = await this.oauthConfig();
         // Generate OAuth2 Code Challenge + State
@@ -319,7 +320,7 @@ class BMWClientAPI {
         const authUrl = oauthConfig.tokenEndpoint?.replace("/token", "/authenticate");
         const authResponse = await this.post(authUrl,
             authData,
-            this.auth.hcaptchatoken ? { hcaptchatoken: this.auth.hcaptchatoken } : {},
+            { hcaptchatoken: this.auth.hcaptchatoken },
             false,
             httpErrorAsError
         )
