@@ -325,6 +325,9 @@ class BMWClientAPI {
             httpErrorAsError
         )
 
+        // Captcha token can be used only once
+        this.auth.hcaptchatoken = null;
+
         authData.set("authorization", authResponse?.redirect_to?.split("authorization=")[1]?.split("&")[0]);
         authData.delete("grant_type");
         authData.delete("username");
