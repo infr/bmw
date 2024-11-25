@@ -8,6 +8,7 @@ const {stringify} = require('./stringify');
 const { SimpleCache } = require('./simple-cache');
 const DEFAULT_SESSION_ID = uuid4();
 const CACHE = new SimpleCache('bmwapi');
+const { Unauthorized, BadRequest, MissingCredentials, MissingCaptchaToken } = require('./errors');
 
 const Regions = {
     NORTH_AMERICA: "na",
@@ -49,20 +50,6 @@ const UA = {
 }
 
 const log = console;
-
-class Unauthorized extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'Unauthorized';
-    }
-}
-
-class BadRequest extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'BadRequest';
-    }
-}
 
 class BMWClientAPI {
     constructor(username, password, geo, hcaptchatoken, auth = {path: '~/.bmw', section: 'default'}) {
@@ -294,8 +281,8 @@ class BMWClientAPI {
         }
 
         if (!force && this.token) return;
-        if (!this.auth?.email || !this.auth?.password) throw new Error('Email or Password is blank');
-        if (!this.auth?.hcaptchatoken) throw new Error('hCaptcha token is blank');
+        if (!this.auth?.email || !this.auth?.password) throw new MissingCredentials('Email or Password is blank');
+        if (!this.auth?.hcaptchatoken) throw new MissingCaptchaToken('hCaptcha token is blank');
 
         const oauthConfig = await this.oauthConfig();
         // Generate OAuth2 Code Challenge + State
