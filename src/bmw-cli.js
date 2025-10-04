@@ -49,8 +49,8 @@ program
             console.log('Success!');
         }
         catch (e) {
-            console.error(e);
-            console.error('Failed to login');
+            console.error(e.message || e);
+            process.exit(1);
         }
     });
 

@@ -112,7 +112,7 @@ class BMWClientAPI {
         return this._request('POST', path, body, headers, null, autologin, httpErrorAsError);
     }
 
-    async _request(method = 'GET', path = '/', body = null, headers = {}, maxTTL = null, autologin = true, httpErrorAsError = true) {
+    async _request(method = 'GET', path = '/', body = null, headers = {}, maxTTL = null, autologin = true, httpErrorAsError = true, retryCount = 0) {
         // first invocation we refresh the API tokens
         if (autologin) await this.login();
         const targetPath = path;
@@ -164,24 +164,44 @@ class BMWClientAPI {
         log.debug(options);
         const urlPrefix = targetPath.startsWith('http') ? '' : `https://${this.host}`;
         const res = await fetch(`${urlPrefix}${targetPath}`, options).catch(async e => {
-            if (!/ENOTFOUND|ECONNRESET|ETIMEDOUT|ESOCKETTIMEDOUT|disconnected/.test(e.message)) log.error(e);
-            // TODO: handle network errors more gracefully
-            // await reset();
-            // await sleep(100);
-            if (autologin) return null;
+            const isNetworkError = /ENOTFOUND|ECONNRESET|ETIMEDOUT|ESOCKETTIMEDOUT|disconnected/.test(e.message);
+            if (!isNetworkError) {
+                log.error(e);
+                return Promise.reject(e);
+            }
+
+            if (retryCount < 3) {
+                const delay = Math.pow(2, retryCount) * 1000;
+                log.info(`Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+                await sleep(delay);
+                return await this._request(method, path, body, headers, maxTTL, autologin, httpErrorAsError, retryCount + 1);
+            }
+
+            log.error(`Network error after ${retryCount} retries: ${e.message}`);
             return Promise.reject(e);
         });
-        if (!res || res === {}) {
-            await this.login(true); // force a login on network connection loss
-            return await this._request(method, path, body, maxTTL, false);
+        if (!res) {
+            throw new Error(`Network request failed after retries`);
         }
         log.debug(res.status + ' ' + res.statusText);
         log.debug(Object.fromEntries(res.headers.entries()));
-        // TODO: deal with network failures
+
+        if (res.status === 429) {
+            throw new Error(`Login failed: Too many requests. Wait 24-48 hours and use a fresh hCaptcha token.`);
+        }
 
         if (/application\/json/.test(res.headers.get('content-type'))) {
-            const json = await res.json();
-            res._body = json; // stash it for the cache because .json() isn't re-callable
+            const rawText = await res.text();
+            try {
+                const json = JSON.parse(rawText);
+                res._body = json; // stash it for the cache because .json() isn't re-callable
+            } catch (jsonError) {
+                log.error(`Failed to parse JSON response from ${method} ${targetPath}`);
+                log.error(`Status: ${res.status} ${res.statusText}`);
+                log.error(`Content-Type: ${res.headers.get('content-type')}`);
+                log.error(`Raw response body: "${rawText}"`);
+                throw new Error(`JSON parse error for ${method} ${targetPath}: ${jsonError.message}. Response was: "${rawText}"`);
+            }
         }
         else if (/text/.test(res.headers.get('content-type'))) {
             const txt = await res.text();
@@ -192,6 +212,10 @@ class BMWClientAPI {
             res._body = Buffer.from(await res.arrayBuffer());
         }
         log.debug(stringify(res._body))
+
+        if (res.status === 403 && res._body && JSON.stringify(res._body).toLowerCase().includes('quota')) {
+            throw new Error(`Login failed: Too many requests. Wait 24-48 hours before retrying.`);
+        }
         if (res.status === 302) {
             res._body = res.headers.get('location');
         }
@@ -214,13 +238,6 @@ class BMWClientAPI {
             log.error(`RETRY: ${method} ${targetPath} (${res.headers.get('status') || res.status + ' ' + res.statusText})`);
             this.token = null; // force a re-login if 5xx errors
             await sleep(1000);
-            return this._request(method, path, body, headers, maxTTL, false, httpErrorAsError);
-        }
-        else if (res.status === 429) {
-            // TODO: how do we get out of infinite retry?
-            log.error(`RETRY: ${method} ${targetPath} (${res.headers.get('status') || res.status + ' ' + res.statusText})`);
-            const retryDur = res.headers.get('retry-after') * 1000 || 500;
-            await sleep(retryDur);
             return this._request(method, path, body, headers, maxTTL, false, httpErrorAsError);
         }
         else if (res.status === 409) {

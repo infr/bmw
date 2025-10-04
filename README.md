@@ -4,7 +4,7 @@ BMW vehicles offer limited control and telemetry through the MyBMW app. This lib
 
 ## Quick Start
 
-* `npm install -g https://github.com/colinbendell/bmw`
+* `npm install -g https://github.com/infr/bmw`
 * Configuration [#authentication](#authentication)
 * Use the `bmw` [CLI](#command-line-interface)
 
@@ -30,6 +30,8 @@ Authentication uses the MyBMW account credentials. It can be passed through to t
 > NB: `na` and `row` has been tested so far
 
 > NB: `hcaptcha_token` is needed for the initial login. After that, the access token is stored and refreshed automatically.
+
+> You can obtain the hCaptcha token by following the instructions at: https://bimmer-connected.readthedocs.io/en/stable/captcha.html
 
 ## Command Line Interface
 
