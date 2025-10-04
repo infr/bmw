@@ -8,7 +8,7 @@ const {stringify} = require('./stringify');
 const { SimpleCache } = require('./simple-cache');
 const DEFAULT_SESSION_ID = uuid4();
 const CACHE = new SimpleCache('bmwapi');
-const { Unauthorized, BadRequest, MissingCredentials, MissingCaptchaToken } = require('./errors');
+const { Unauthorized, BadRequest, MissingCredentials, MissingCaptchaToken, RateLimited } = require('./errors');
 
 const Regions = {
     NORTH_AMERICA: "na",
@@ -187,7 +187,7 @@ class BMWClientAPI {
         log.debug(Object.fromEntries(res.headers.entries()));
 
         if (res.status === 429) {
-            throw new Error(`Login failed: Too many requests. Wait 24-48 hours and use a fresh hCaptcha token.`);
+            throw new RateLimited(`Login failed: Too many requests. Wait 24-48 hours and use a fresh hCaptcha token.`);
         }
 
         if (/application\/json/.test(res.headers.get('content-type'))) {
@@ -214,7 +214,7 @@ class BMWClientAPI {
         log.debug(stringify(res._body))
 
         if (res.status === 403 && res._body && JSON.stringify(res._body).toLowerCase().includes('quota')) {
-            throw new Error(`Login failed: Too many requests. Wait 24-48 hours before retrying.`);
+            throw new RateLimited(`Login failed: Too many requests. Wait 24-48 hours and use a fresh hCaptcha token.`);
         }
         if (res.status === 302) {
             res._body = res.headers.get('location');

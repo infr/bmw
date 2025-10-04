@@ -26,4 +26,11 @@ class MissingCaptchaToken extends Error {
     }
 }
 
-module.exports = { Unauthorized, BadRequest, MissingCredentials, MissingCaptchaToken };
+class RateLimited extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'RateLimited';
+    }
+}
+
+module.exports = { Unauthorized, BadRequest, MissingCredentials, MissingCaptchaToken, RateLimited };
