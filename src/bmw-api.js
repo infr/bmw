@@ -30,13 +30,15 @@ const UA = {
     [Regions.NORTH_AMERICA]: {
         host: "cocoapi.bmwgroup.us",
         ocpApimSubscriptionKey: "MzFlMTAyZjUtNmY3ZS03ZWYzLTkwNDQtZGRjZTYzODkxMzYy",
-        version: "2.12.0(19883)",
+        version: "4.9.2(36892)",
+        userAgent: "Dart/3.3 (dart:io)",
     },
 
     [Regions.REST_OF_WORLD]: {
         host: "cocoapi.bmwgroup.com",
         ocpApimSubscriptionKey: "NGYxYzg1YTMtNzU4Zi1hMzdkLWJiYjYtZjg3MDQ0OTRhY2Zh",
-        version: "2.12.0(19883)",
+        version: "4.9.2(36892)",
+        userAgent: "Dart/3.3 (dart:io)",
     },
 
     // [Regions.CHINA]: {
@@ -69,6 +71,7 @@ class BMWClientAPI {
     get region() {return this.auth?.geo};
     get host() {  return UA[this.auth.geo]?.host; }
     get version() { return UA[this.auth.geo]?.version; }
+    get userAgent() { return UA[this.auth.geo]?.userAgent || 'Dart/3.3 (dart:io)'; }
 
     resetCache() {
         CACHE.reset();
@@ -133,14 +136,14 @@ class BMWClientAPI {
 
         const correlationID = uuid4();
         const reqHeaders = Object.assign({
-            // 'Locale': 'en_US',
-            'Accept-Language': 'en-US',
+            'accept': 'application/json',
+            'accept-language': 'en',
             'x-raw-locale': 'en-US',
-            // 'Accept': '*/*',
-            'User-Agent': 'Dart/2.15 (dart:io)',
-            'X-User-Agent': `android(SP1A.210812.016.C1);${this.brand};${this.version};${this.region}`,
+            'user-agent': this.userAgent,
+            'x-user-agent': `android(SP1A.210812.016.C1);${this.brand};${this.version};${this.region}`,
+            'ocp-apim-subscription-key': this.ocpApimSubscriptionKey,
             'bmw-session-id': this.auth.session,
-            'bmw-units-preferences': 'd=KM;v=L',
+            'bmw-units-preferences': 'd=KM;v=L;p=B;ec=KWH100KM;fc=L100KM;em=GKM;',
             "bmw-current-date": new Date().toISOString(),
             '24-hour-format': 'true',
             "x-identity-provider": "gcdm",
@@ -155,9 +158,12 @@ class BMWClientAPI {
         const options = {method, headers: reqHeaders, body, redirect: 'manual'};
         if (body) {
             options.body = body;
-            // options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            // options.body = JSON.stringify(body);
-            // options.headers['Content-Type'] = 'application/json';
+            // If body is a plain object, stringify it and set content-type
+            if (body && typeof body === 'object' && body.constructor === Object) {
+                options.body = JSON.stringify(body);
+                options.headers['content-type'] = 'application/json';
+            }
+            // URLSearchParams and other types will be handled by fetch automatically
         }
 
         log.info(`${method} ${targetPath} @${maxTTL}`);
@@ -388,7 +394,7 @@ class BMWClientAPI {
     }
 
     async vehicles() {
-        return await this.get(`/eadrax-vcs/v4/vehicles`, {}, 60*60);
+        return await this.get(`/eadrax-vcs/v5/vehicle-list`, {}, 60*60);
     }
 
     async vehicleState(vin) {
@@ -419,7 +425,7 @@ class BMWClientAPI {
 
     async chargingStatistics(vin, date = new Date()) {
         const currentDate = date?.toISOString();
-        return await this.get(`/eadrax-chs/v1/charging-statistics?vin=${vin}&currentDate=${currentDate}`);
+        return await this.get(`/eadrax-chs/v2/charging-statistics?vin=${vin}&currentDate=${currentDate}`);
     }
     async chargingSessions(vin, date=new Date(), limit=50, token=null, groupByWeek=false) {
         //"2022-09-01T00:00:00Z"
@@ -474,38 +480,37 @@ class BMWClientAPI {
     }
 
     async startClimate(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/climate-now?action=START`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/climate-now?action=START`, {"vin": vin});
     }
 
     async stopClimate(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/climate-now?action=STOP`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/climate-now?action=STOP`, {"vin": vin});
     }
 
     async lock(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/door-lock`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/door-lock`, {"vin": vin});
     }
 
     async unlock(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/door-unlock`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/door-unlock`, {"vin": vin});
     }
 
     async flashLights(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/light-flash`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/light-flash`, {"vin": vin});
     }
 
     async honkHorn(vin) {
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/horn-blow`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/horn-blow`, {"vin": vin});
     }
 
     async remoteCommands(vin, serviceType, params = {}) {
-        // /eadrax-vrccs/v3/presentation/remote-commands/{vin}/climate-now?action=STOP
-
+        // /eadrax-vrccs/v4/presentation/remote-commands/{service_type}
         //climate-now
         //door-lock
         //light-flash
         //horn-blow
         const data = new URLSearchParams(Object.entries(params));
-        return await this.post(`/eadrax-vrccs/v3/presentation/remote-commands/${vin}/${serviceType}?${data}`, {});
+        return await this.post(`/eadrax-vrccs/v4/presentation/remote-commands/${serviceType}?${data}`, {"vin": vin});
     }
 
     async remoteCommandsEventStatus(eventID) {
